@@ -60,11 +60,36 @@ You should receive a TwiML response like:
     - Auto deploy on push: enabled
 
 Environment variables (Render Dashboard → Environment):
-- `TWILIO_AUTH_TOKEN` (optional now; required when you enable signature validation)
+- `TWILIO_AUTH_TOKEN` (required for webhook signature validation)
 - `PORT` is provided by Render automatically; the server already respects it.
+- `PUBLIC_BASE_URL` Optional but recommended (e.g., `https://<service>.onrender.com`). Used to reconstruct the exact URL Twilio called when validating signatures behind a proxy.
 
 After deploy, set your Twilio WhatsApp webhook to:
 - `https://<your-service>.onrender.com/webhook/whatsapp`
+
+## Webhook Authentication (Twilio Signature)
+
+- The endpoint `/webhook/whatsapp` is protected by Twilio's `X-Twilio-Signature` validation using the official Go SDK (`github.com/twilio/twilio-go/client`).
+- Set `TWILIO_AUTH_TOKEN` in Render to enable validation; requests without a valid signature return `403`.
+- When running behind Render's proxy, optionally set `PUBLIC_BASE_URL` to your public HTTPS URL so validation uses the exact URL Twilio called.
+
+Protect additional paths
+- Wrap any handler with the middleware:
+
+```
+mux.Handle("/another/protected/path", middleware.TwilioAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+  // ...
+})))
+```
+
+Local test without validation:
+
+```
+# Comment out TWILIO_AUTH_TOKEN in .env to bypass validation locally.
+curl -X POST http://localhost:8080/webhook/whatsapp \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data 'From=whatsapp:+14155238886&To=whatsapp:+1234567890&Body=hello'
+```
 
 ## Next Steps (not implemented yet)
 
