@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: scavenger-hunt
+    env: go
+    plan: free
+    buildCommand: go build -o bin/scavenger-hunt .
+    startCommand: ./bin/scavenger-hunt
+    autoDeploy: true
+    healthCheckPath: /healthz
+

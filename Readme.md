@@ -47,6 +47,25 @@ You should receive a TwiML response like:
 - `.env.example` – environment variables.
 - `Makefile` – convenience `run` and `build` targets.
 
+## Deploy on Render (Web Service)
+
+- Commit and push this repo to GitHub/GitLab.
+- This repo includes `render.yaml:1` so you can either:
+  - Use Render Blueprints: `New` → `Blueprint` → select the repo (it will create a Web Service per `render.yaml`).
+  - Or create manually as a Web Service:
+    - Environment: `Go`
+    - Build Command: `go build -o bin/scavenger-hunt .`
+    - Start Command: `./bin/scavenger-hunt`
+    - Health Check Path: `/healthz`
+    - Auto deploy on push: enabled
+
+Environment variables (Render Dashboard → Environment):
+- `TWILIO_AUTH_TOKEN` (optional now; required when you enable signature validation)
+- `PORT` is provided by Render automatically; the server already respects it.
+
+After deploy, set your Twilio WhatsApp webhook to:
+- `https://<your-service>.onrender.com/webhook/whatsapp`
+
 ## Next Steps (not implemented yet)
 
 - Load clues from JSON and track per-user progress (keyed by `From`).
