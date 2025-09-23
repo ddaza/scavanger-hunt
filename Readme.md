@@ -1,3 +1,54 @@
-# Scavanger Hunt Service
+# Scavenger Hunt Service (Go + Twilio WhatsApp)
 
-A small webhook server that will be connected to twillio and respond to propmts.
+A minimal Go webhook server for Twilio WhatsApp that currently returns a TwiML "hello world". It also includes a placeholder JSON data source for future clue logic.
+
+## Quick Start
+
+- Requirements: Go 1.22+
+- Local run:
+  - `cp .env.example .env` (optional, to change `PORT`)
+  - `make run` or `go run .`
+  - Health check: `curl -s http://localhost:8080/healthz`
+
+## WhatsApp Webhook (Hello World)
+
+- Endpoint: `POST /webhook/whatsapp`
+- Expected content type: `application/x-www-form-urlencoded`
+- Returns: TwiML with a simple message
+
+Example local test:
+
+```
+curl -X POST http://localhost:8080/webhook/whatsapp \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data 'From=whatsapp:+14155238886&To=whatsapp:+1234567890&Body=hello'
+```
+
+You should receive a TwiML response like:
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<Response><Message>Hello from Scavenger Hunt! 👋</Message></Response>
+```
+
+## Twilio WhatsApp Setup (dev sandbox)
+
+1. Enable the WhatsApp Sandbox in Twilio.
+2. Set the sandbox "When a message comes in" webhook to your public URL (e.g., via `ngrok` or Cloudflare Tunnel):
+   - `https://<your-public-host>/webhook/whatsapp`
+3. Send a WhatsApp message to your Twilio sandbox number; Twilio will POST to the webhook and relay the TwiML reply back to the user.
+
+> Note: For production, add Twilio signature validation using `TWILIO_AUTH_TOKEN` and HTTPS.
+
+## Project Layout
+
+- `main.go` – HTTP server and WhatsApp webhook handler.
+- `config/clues.json` – placeholder data source for future clue logic.
+- `.env.example` – environment variables.
+- `Makefile` – convenience `run` and `build` targets.
+
+## Next Steps (not implemented yet)
+
+- Load clues from JSON and track per-user progress (keyed by `From`).
+- Validate Twilio signatures on incoming requests.
+- Add persistence (DB) once JSON prototype is validated.

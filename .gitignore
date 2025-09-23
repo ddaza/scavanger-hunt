@@ -1,0 +1,9 @@
+# Binaries
+/bin/
+
+# Local env
+.env
+
+# macOS
+.DS_Store
+
