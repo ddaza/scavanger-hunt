@@ -2,12 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 
 	"scavenger-hunt/internal/middleware"
+
+	"github.com/twilio/twilio-go/twiml"
 )
 
 type Clue struct {
@@ -23,9 +24,7 @@ func LoadClues() ([]Clue, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	defer f.Close()
-
 	var clues []Clue
 	if err := json.NewDecoder(f).Decode(&clues); err != nil {
 		return nil, err
@@ -62,12 +61,21 @@ func main() {
 		if err := r.ParseForm(); err != nil {
 			log.Printf("parse form error: %v", err)
 		}
+
+		message := &twiml.MessagingMessage{Body: "Yay, valid requests!"}
+		twimlResult, err := twiml.Messages([]twiml.Element{message})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		from := r.PostFormValue("From")
 		body := r.PostFormValue("Body")
 		log.Printf("incoming WhatsApp message from %s: %q", from, body)
 
-		w.Header().Set("Content-Type", "application/xml")
-		fmt.Fprint(w, `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>Hello from Scavenger Hunt! 👋</Message></Response>`)
+		w.Header().Set("Content-Type", "text/xml")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(twimlResult))
 	})))
 
 	addr := ":" + port
