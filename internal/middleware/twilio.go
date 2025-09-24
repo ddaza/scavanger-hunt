@@ -9,16 +9,20 @@ import (
 	twclient "github.com/twilio/twilio-go/client"
 )
 
+type Config struct {
+	SkipVerify bool // explicit dev toggle
+}
+
 // TwilioAuth returns middleware that validates Twilio's X-Twilio-Signature
 // header using the configured Auth Token. It supports both form-encoded and
 // JSON payloads (Validate vs ValidateBody). If validation fails, it returns 403.
-func TwilioAuth(next http.Handler) http.Handler {
+func TwilioAuth(cfg Config, next http.Handler) http.Handler {
 	authToken := os.Getenv("TWILIO_AUTH_TOKEN")
 	publicBase := strings.TrimRight(os.Getenv("PUBLIC_BASE_URL"), "/")
 	validator := twclient.NewRequestValidator(authToken)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if authToken == "" {
+		if authToken == "" && cfg.SkipVerify {
 			// If no token is set, skip validation (useful for local dev).
 			next.ServeHTTP(w, r)
 			return

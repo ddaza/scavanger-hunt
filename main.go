@@ -33,6 +33,12 @@ func LoadClues() ([]Clue, error) {
 }
 
 func main() {
+	skip := os.Getenv("TWILIO_SKIP_VERIFY")
+	cfg := middleware.Config{SkipVerify: false}
+	if skip == "true" {
+		cfg.SkipVerify = true
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -52,7 +58,7 @@ func main() {
 	})
 
 	// Minimal WhatsApp webhook protected by Twilio signature validation.
-	mux.Handle("/webhook/whatsapp", middleware.TwilioAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/webhook/whatsapp", middleware.TwilioAuth(cfg, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			_, _ = w.Write([]byte("method not allowed"))
