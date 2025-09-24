@@ -1,73 +1,76 @@
 package main
 
 import (
-    "encoding/json"
-    "fmt"
-    "log"
-    "net/http"
-    "os"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
 
-    "scavenger-hunt/internal/middleware"
+	"scavenger-hunt/internal/middleware"
 )
 
 type Clue struct {
-    ID       int    `json:"id"`
-    Question string `json:"question"`
-    Answer   string `json:"answer"`
+	ID       int    `json:"id"`
+	Question string `json:"question"`
+	Answer   string `json:"answer"`
 }
 
+const CLUES_CONFIG = "config/clues.json"
+
 func LoadClues() ([]Clue, error) {
-    f, err := os.Open("config/clues.json")
-    if err != nil {
-        return nil, err
-    }
-    defer f.Close()
-    var clues []Clue
-    if err := json.NewDecoder(f).Decode(&clues); err != nil {
-        return nil, err
-    }
-    return clues, nil
+	f, err := os.Open(CLUES_CONFIG)
+	if err != nil {
+		return nil, err
+	}
+
+	defer f.Close()
+
+	var clues []Clue
+	if err := json.NewDecoder(f).Decode(&clues); err != nil {
+		return nil, err
+	}
+	return clues, nil
 }
 
 func main() {
-    port := os.Getenv("PORT")
-    if port == "" {
-        port = "8080"
-    }
-    clues, err := LoadClues()
-    if err != nil {
-        log.Printf("note: could not load clues (config/clues.json): %v", err)
-    } else {
-        log.Printf("loaded %d clues (not used yet)", len(clues))
-    }
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	clues, err := LoadClues()
+	if err != nil {
+		log.Printf("note: could not load clues (config/clues.json): %v", err)
+	} else {
+		log.Printf("loaded %d clues (not used yet)", len(clues))
+	}
 
-    mux := http.NewServeMux()
+	mux := http.NewServeMux()
 
-    mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-        w.WriteHeader(http.StatusOK)
-        _, _ = w.Write([]byte("ok"))
-    })
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
 
-    // Minimal WhatsApp webhook protected by Twilio signature validation.
-    mux.Handle("/webhook/whatsapp", middleware.TwilioAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        if r.Method != http.MethodPost {
-            w.WriteHeader(http.StatusMethodNotAllowed)
-            _, _ = w.Write([]byte("method not allowed"))
-            return
-        }
-        if err := r.ParseForm(); err != nil {
-            log.Printf("parse form error: %v", err)
-        }
-        from := r.PostFormValue("From")
-        body := r.PostFormValue("Body")
-        log.Printf("incoming WhatsApp message from %s: %q", from, body)
+	// Minimal WhatsApp webhook protected by Twilio signature validation.
+	mux.Handle("/webhook/whatsapp", middleware.TwilioAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_, _ = w.Write([]byte("method not allowed"))
+			return
+		}
+		if err := r.ParseForm(); err != nil {
+			log.Printf("parse form error: %v", err)
+		}
+		from := r.PostFormValue("From")
+		body := r.PostFormValue("Body")
+		log.Printf("incoming WhatsApp message from %s: %q", from, body)
 
-        w.Header().Set("Content-Type", "application/xml")
-        fmt.Fprint(w, `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>Hello from Scavenger Hunt! 👋</Message></Response>`)
-    })))
+		w.Header().Set("Content-Type", "application/xml")
+		fmt.Fprint(w, `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>Hello from Scavenger Hunt! 👋</Message></Response>`)
+	})))
 
-    addr := ":" + port
-    log.Printf("listening on %s", addr)
-    log.Fatal(http.ListenAndServe(addr, mux))
+	addr := ":" + port
+	log.Printf("listening on %s", addr)
+	log.Fatal(http.ListenAndServe(addr, mux))
 }
-
